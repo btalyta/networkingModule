@@ -21,6 +21,7 @@ public protocol Endpoint {
     var method: RequestMethod { get }
     var body: Data? { get }
     var headers: [String: String] { get }
+    var queries: [String: String] { get }
 }
 
 public protocol HttpClientProtocol {

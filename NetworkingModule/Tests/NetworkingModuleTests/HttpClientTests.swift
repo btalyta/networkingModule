@@ -54,6 +54,39 @@ class HttpClientTests: XCTestCase {
         wait(for: [errorExpectation], timeout: 1)
     }
     
+    func test_createURL_whenThereIsValidURL_withQueries_itShouldReturnsCorrectURL() {
+        let endpointMock = EndpointMock(queries: ["name": "Stuart"])
+        let sut = HttpClient()
+        let expectedResult = URL(string: "https://testClient?name=Stuart")
+        
+        let urlResult = sut.createURL(endpointMock)
+        
+        XCTAssertEqual(urlResult, expectedResult)
+    }
+    
+    
+    func test_createURL_whenThereIsValidURL_withoutQueries_itShouldReturnsCorrectURL() {
+        let endpointMock = EndpointMock()
+        let sut = HttpClient()
+        let expectedResult = URL(string: "https://testClient")
+        
+        let urlResult = sut.createURL(endpointMock)
+        
+        XCTAssertEqual(urlResult, expectedResult)
+    }
+    
+    func test_prepareRequest_itShouldReturnsCorrectRequest() {
+        let endpointMock = EndpointMock()
+        let sut = HttpClient()
+        
+        let requestResult = sut.prepareRequest(endpointMock)
+        
+        XCTAssertEqual(requestResult?.url, URL(string: "https://testClient"))
+        XCTAssertEqual(requestResult?.httpBody, nil)
+        XCTAssertEqual(requestResult?.httpMethod, "GET")
+        XCTAssertEqual(requestResult?.value(forHTTPHeaderField: "Content-Type"), "application/json")
+    }
+        
     func stubRequest(with success: Bool = true) {
         stub(condition: isHost("testClient")) { _ in
             if success {
@@ -70,17 +103,22 @@ class HttpClientTests: XCTestCase {
 }
 
 class EndpointMock: Endpoint {
-    var url: String {
-        return "https://testClient"
-    }
+    var url: String
+    var method: RequestMethod
+    var body: Data?
+    var headers: [String: String]
+    var queries: [String : String] = [:]
     
-    var method: RequestMethod {
-        return .get
+    init (url: String = "https://testClient",
+          method: RequestMethod = .get,
+          body: Data? = nil,
+          headers: [String: String] = ["Content-Type": "application/json"],
+          queries: [String : String] = [:]
+    ) {
+        self.url = url
+        self.method = method
+        self.body = body
+        self.headers = headers
+        self.queries = queries
     }
-    
-    var body: Data? {
-        return nil
-    }
-    
-    var headers: [String: String] = ["Content-Type": "application/json"]
 }

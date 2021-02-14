@@ -8,23 +8,23 @@
 import Foundation
 
 public class HttpClient: HttpClientProtocol {
-
+    
     typealias RequestResult = Result<Data, Error>
     private let urlSession: URLSession
-
+    
     public init(urlSession: URLSession = URLSession.shared) {
         self.urlSession = urlSession
     }
-
+    
     public func request(_ endpoint: Endpoint,
-                 completion: ((Result<Data, Error>) -> Void)?) {
-
+                        completion: ((Result<Data, Error>) -> Void)?) {
+        
         guard let urlRequest = prepareRequest(endpoint) else {
             let result = RequestResult.failure(APIError.request)
             completion?(result)
             return
         }
-
+        
         let task = urlSession.dataTask(with: urlRequest) { (data, response, error) in
             if error != nil {
                 completion?(Result.failure(APIError.service))
@@ -35,7 +35,7 @@ public class HttpClient: HttpClientProtocol {
                 completion?(Result.failure(APIError.timeout))
                 return
             }
-
+            
             if 200 ... 299 ~= httpResponse.statusCode {
                 if let data = data {
                     completion?(RequestResult.success(data))
@@ -55,25 +55,40 @@ public class HttpClient: HttpClientProtocol {
             }
             return
         }
-
+        
         task.resume()
     }
-
-    private func prepareRequest(_ request: Endpoint) -> URLRequest? {
-
-        guard let url = URL(string: request.url) else { return nil }
-
+    
+    func prepareRequest(_ request: Endpoint) -> URLRequest? {
+        
+        guard let url = createURL(request) else { return nil }
+        
         var newRequest = URLRequest(url: url,
                                     cachePolicy: URLRequest.CachePolicy.useProtocolCachePolicy,
                                     timeoutInterval: 30)
-
+        
         newRequest.httpMethod = request.method.rawValue
-
+        
         request.headers.forEach { key, value in
             newRequest.addValue(value, forHTTPHeaderField: key)
         }
-
+        
         newRequest.httpBody = request.body
         return newRequest
+    }
+    
+    func createURL(_ endpoint: Endpoint) -> URL? {
+        var components = URLComponents(string: endpoint.url)
+        var queryItems: [URLQueryItem] = []
+        
+        endpoint.queries.forEach { key, value in
+            queryItems.append(URLQueryItem(name: key, value: value))
+        }
+        
+        if queryItems.count > 0 {
+            components?.queryItems = queryItems
+        }
+        
+        return components?.url
     }
 }
